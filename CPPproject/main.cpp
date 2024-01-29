@@ -108,7 +108,7 @@ public:
 
 	void placeSand(int x, int y) {
 		grid[x][y] = hue;
-		sandCount += 1;
+		//sandCount++;
 	}
 
 	void reset() {
@@ -131,14 +131,14 @@ int WinMain() {
 	sf::Time previousTime = FPSclock.getElapsedTime();
 	sf::Time currentTime;
 
-	char title[30] = "Sandbox Game | FPS: 0";
-
 	sf::RenderWindow window(sf::VideoMode(gridSize * sandSize, gridSize * sandSize),
-		sf::String(title), sf::Style::Close);
+		"Sandbox Game", sf::Style::Close);
 
 	ImGui::SFML::Init(window);
+	ImGuiIO& io = ImGui::GetIO();
+	io.ConfigWindowsMoveFromTitleBarOnly = true;
+	io.ConfigWindowsResizeFromEdges = false;
 	bool guiInitSettingsSet = false;
-	int sandCount = 0;
 
 	sf::Clock deltaClock;
 
@@ -149,6 +149,8 @@ int WinMain() {
 	World world(gridSize, sandSize);
 
 	sf::Clock clock;
+
+	int brushSize = 1;
 
 	while (window.isOpen()) {
 		window.clear();
@@ -161,7 +163,7 @@ int WinMain() {
 			if (event.type == sf::Event::Closed) {
 				window.close();
 			}
-			else if (!ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) && sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
+			else if ((!ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) && !ImGui::IsAnyItemHovered())  && sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
 				sf::Vector2i localPosition = sf::Mouse::getPosition(window);
 
 				int gridX = std::floor(localPosition.x / world.sandSize);
@@ -169,9 +171,8 @@ int WinMain() {
 
 				// Check if the calculated grid indices are within bounds
 				if (gridX >= 0 && gridX <= world.getWidth() && gridY >= 0 && gridY <= world.getHeight()) {
-					int brushSize = 1;
-					for (int x = -brushSize; x <= brushSize; ++x) {
-						for (int y = -brushSize; y <= brushSize; ++y) {
+					for (int x = -brushSize / 2; x <= brushSize / 2; ++x) {
+						for (int y = -brushSize / 2; y <= brushSize / 2; ++y) {
 							// Check if the calculated indices after applying brush size are within bounds
 							if (gridX + x >= 0 && gridX + x < world.getWidth() && gridY + y >= 0 && gridY + y < world.getHeight()) 
 							{
@@ -190,8 +191,7 @@ int WinMain() {
 			}
 		}
 		ImGui::SFML::Update(window, deltaClock.restart());
-
-		ImGui::Begin("GUI");
+		ImGui::Begin("GUI", nullptr, ImGuiWindowFlags_NoResize);
 		if (!guiInitSettingsSet)
 		{ 
 			ImGui::SetWindowPos(ImVec2(0, 0)); 
@@ -199,8 +199,11 @@ int WinMain() {
 			guiInitSettingsSet = true;
 		}
 		ImGui::Text("FPS: %d", (int)fps);
-		ImGui::Text("Is GUI hovered: %d", (int)ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow));
-		ImGui::Text("Sand count: %d", world.sandCount);
+		int windowHovered = 0;
+		windowHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) + ImGui::IsAnyItemHovered();
+		if (windowHovered > 1) windowHovered = 1;
+		ImGui::Text("Is GUI hovered: %d", windowHovered);
+		//ImGui::Text("Sand count: %d", world.sandCount);
 		ImGui::Spacing();
 		ImGui::Spacing();
 		ImGui::Spacing();
@@ -215,6 +218,10 @@ int WinMain() {
 			world.reset();
 		}
 		ImGui::Checkbox("Color changing sand", &world.colorChangingSand);
+		ImGui::SliderInt("Brush size", &brushSize, 1, 10, "%d");
+		//ImGui::Separator();
+		//ImGui::SliderInt("Grid size", &gridSize, 200, 1000, "%d");
+		//ImGui::SliderInt("Sand size", &sandSize, 1, 8, "%d");
 		ImGui::End();
 
 		float sec = clock.restart().asSeconds();
@@ -231,8 +238,6 @@ int WinMain() {
 
 		currentTime = FPSclock.getElapsedTime();
 		fps = 1.0f / (currentTime.asSeconds() - previousTime.asSeconds());
-		std::snprintf(title, sizeof(title), "Sandbox Game | FPS: %.0f", fps);
-		window.setTitle(sf::String(title));
 		previousTime = currentTime;
 	}
 	ImGui::SFML::Shutdown();
